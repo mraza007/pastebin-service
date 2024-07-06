@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Python Pastebin</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        textarea, select { width: 100%; padding: 10px; margin-bottom: 10px; }
+        input[type="submit"] { background-color: #4CAF50; color: white; padding: 10px 20px; border: none; cursor: pointer; }
+        pre { white-space: pre-wrap; word-wrap: break-word; }
+    </style>
+    {% if highlight_css %}
+    <style>{{ highlight_css }}</style>
+    {% endif %}
+</head>
+<body>
+    <div class="container">
+        <h1>Simple Python Pastebin</h1>
+        {% if not paste_content %}
+        <form method="post">
+            <textarea name="content" rows="10" cols="50" required></textarea><br>
+            <select name="language">
+                {% for lang in languages %}
+                <option value="{{ lang[0] }}">{{ lang[1] }}</option>
+                {% endfor %}
+            </select><br>
+            <input type="submit" value="Create Paste">
+        </form>
+        {% endif %}
+        {% if paste_url %}
+        <p>Your paste is available at: <a href="{{ paste_url }}">{{ paste_url }}</a></p>
+        {% endif %}
+        {% if paste_content %}
+        <h2>Paste Content:</h2>
+        {{ paste_content|safe }}
+        <br>
+        <a href="/">Create New Paste</a>
+        {% endif %}
+    </div>
+</body>
+</html>
