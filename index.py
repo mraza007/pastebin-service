@@ -103,6 +103,28 @@ def create_app(paste_dir: str = "pastes") -> Flask:
             },
         )
 
+    @app.route("/api/paste", methods=["POST"])
+    def api_paste():
+        content = request.get_data(as_text=True)
+        if not content.strip():
+            content = request.form.get("content", "")
+        if not content.strip():
+            abort(400)
+        markdown_flag = request.args.get("markdown") in ("1", "true", "on")
+        paste = Paste(
+            id=shortuuid.uuid(),
+            content=content,
+            language=normalize_language(request.args.get("lang", "text")),
+            render_mode="markdown" if markdown_flag else "code",
+            created_at=now(),
+            expires_at=compute_expires_at(request.args.get("expiry", "never")),
+            burn_after_read=request.args.get("burn") in ("1", "true", "on"),
+            views=0,
+        )
+        save_paste(paste, base_dir=app.config["PASTE_DIR"])
+        url = url_for("view_paste", paste_id=paste.id, _external=True)
+        return Response(url + "\n", status=201, mimetype="text/plain")
+
     return app
 
 
