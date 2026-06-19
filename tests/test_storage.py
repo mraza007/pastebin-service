@@ -1,6 +1,21 @@
 import pytest
 
-from storage import Paste, is_valid_id
+from storage import Paste, is_valid_id, load_raw, save_paste
+
+
+def _make(**kw):
+    base = dict(
+        id="abc123",
+        content="hi",
+        language="python",
+        render_mode="code",
+        created_at=1,
+        expires_at=None,
+        burn_after_read=False,
+        views=0,
+    )
+    base.update(kw)
+    return Paste(**base)
 
 
 @pytest.mark.parametrize("good", ["abc123", "AbC9xyz", "shortuuid22chars000000"])
@@ -52,3 +67,18 @@ def test_paste_to_dict_has_all_fields():
         "burn_after_read": True,
         "views": 3,
     }
+
+
+def test_save_then_load_raw(tmp_path):
+    p = _make()
+    save_paste(p, base_dir=str(tmp_path))
+    loaded = load_raw("abc123", base_dir=str(tmp_path))
+    assert loaded == p
+
+
+def test_load_raw_missing_returns_none(tmp_path):
+    assert load_raw("doesnotexist", base_dir=str(tmp_path)) is None
+
+
+def test_load_raw_invalid_id_returns_none(tmp_path):
+    assert load_raw("../secret", base_dir=str(tmp_path)) is None

@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import json
+import os
 import re
 from dataclasses import asdict, dataclass
+
+PASTE_DIR = "pastes"
 
 _ID_RE = re.compile(r"^[A-Za-z0-9]{1,40}$")
 
@@ -28,3 +32,24 @@ class Paste:
     @classmethod
     def from_dict(cls, data: dict) -> "Paste":
         return cls(**data)
+
+
+def _path(paste_id: str, base_dir: str) -> str:
+    return os.path.join(base_dir, f"{paste_id}.json")
+
+
+def save_paste(paste: Paste, base_dir: str = PASTE_DIR) -> None:
+    os.makedirs(base_dir, exist_ok=True)
+    with open(_path(paste.id, base_dir), "w", encoding="utf-8") as f:
+        json.dump(paste.to_dict(), f)
+
+
+def load_raw(paste_id: str, base_dir: str = PASTE_DIR) -> Paste | None:
+    """Load without applying expiry/burn rules. None if missing/invalid."""
+    if not is_valid_id(paste_id):
+        return None
+    path = _path(paste_id, base_dir)
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding="utf-8") as f:
+        return Paste.from_dict(json.load(f))
