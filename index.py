@@ -3,7 +3,15 @@ from __future__ import annotations
 import os
 
 import shortuuid
-from flask import Flask, abort, redirect, render_template, request, url_for
+from flask import (
+    Flask,
+    Response,
+    abort,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
 
 from clock import now
 from rendering import (
@@ -69,6 +77,30 @@ def create_app(paste_dir: str = "pastes") -> Flask:
             burned=paste.burn_after_read,
             light_css=LIGHT_CSS,
             dark_css=DARK_CSS,
+        )
+
+    def _load_or_404(paste_id: str) -> Paste:
+        if not is_valid_id(paste_id):
+            abort(404)
+        paste = load_for_view(paste_id, base_dir=app.config["PASTE_DIR"])
+        if paste is None:
+            abort(404)
+        return paste
+
+    @app.route("/raw/<paste_id>")
+    def raw_paste(paste_id: str):
+        paste = _load_or_404(paste_id)
+        return Response(paste.content, mimetype="text/plain")
+
+    @app.route("/dl/<paste_id>")
+    def download_paste(paste_id: str):
+        paste = _load_or_404(paste_id)
+        return Response(
+            paste.content,
+            mimetype="text/plain",
+            headers={
+                "Content-Disposition": f"attachment; filename={paste_id}.txt"
+            },
         )
 
     return app
