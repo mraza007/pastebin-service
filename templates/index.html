@@ -1,41 +1,42 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Simple Python Pastebin</title>
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
-        .container { max-width: 800px; margin: 0 auto; }
-        textarea, select { width: 100%; padding: 10px; margin-bottom: 10px; }
-        input[type="submit"] { background-color: #4CAF50; color: white; padding: 10px 20px; border: none; cursor: pointer; }
-        pre { white-space: pre-wrap; word-wrap: break-word; }
-    </style>
-    {% if highlight_css %}
-    <style>{{ highlight_css }}</style>
-    {% endif %}
-</head>
-<body>
-    <div class="container">
-        <h1>Simple Python Pastebin</h1>
-        {% if not paste_content %}
-        <form method="post">
-            <textarea name="content" rows="10" cols="50" required></textarea><br>
-            <select name="language">
-                {% for lang in languages %}
-                <option value="{{ lang[0] }}">{{ lang[1] }}</option>
-                {% endfor %}
-            </select><br>
-            <input type="submit" value="Create Paste">
-        </form>
-        {% endif %}
-        {% if paste_url %}
-        <p>Your paste is available at: <a href="{{ paste_url }}">{{ paste_url }}</a></p>
-        {% endif %}
-        {% if paste_content %}
-        <h2>Paste Content:</h2>
-        {{ paste_content|safe }}
-        <br>
-        <a href="/">Create New Paste</a>
-        {% endif %}
+{% extends "base.html" %}
+{% block body %}
+  {% if not paste_content %}
+  <form method="post">
+    <textarea name="content" rows="14" required placeholder="Paste here..."></textarea>
+    <div class="controls">
+      <label>Language
+        <select name="language">
+          {% for value, label in languages %}
+          <option value="{{ value }}" {{ 'selected' if value == 'text' }}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Render
+        <select name="render_mode">
+          <option value="code">Code</option>
+          <option value="markdown">Markdown</option>
+        </select>
+      </label>
+      <label>Expires
+        <select name="expiry">
+          <option value="never">Never</option>
+          <option value="10m">10 minutes</option>
+          <option value="1h">1 hour</option>
+          <option value="1d">1 day</option>
+          <option value="1w">1 week</option>
+        </select>
+      </label>
+      <label class="checkbox"><input type="checkbox" name="burn"> Burn after reading</label>
     </div>
-</body>
-</html>
+    <button type="submit">Create Paste</button>
+  </form>
+  {% else %}
+  {% if burned %}<p class="notice">This paste was set to burn-after-read and has now been deleted.</p>{% endif %}
+  <div class="paste-actions">
+    <a href="/raw/{{ paste_id }}">Raw</a>
+    <a href="/dl/{{ paste_id }}">Download</a>
+    <a href="/">New Paste</a>
+  </div>
+  <div class="paste-body">{{ paste_content|safe }}</div>
+  {% endif %}
+{% endblock %}

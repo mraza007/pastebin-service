@@ -1,0 +1,5 @@
+flask
+shortuuid
+pygments
+markdown
+bleach
