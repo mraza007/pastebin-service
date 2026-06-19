@@ -9,6 +9,7 @@ from storage import (
     load_for_view,
     load_raw,
     save_paste,
+    sweep_expired,
 )
 
 
@@ -136,3 +137,13 @@ def test_unknown_option_defaults_to_never(monkeypatch):
 
 def test_expiry_options_keys():
     assert set(EXPIRY_OPTIONS) >= {"never", "10m", "1h", "1d", "1w"}
+
+
+def test_sweep_removes_only_expired(tmp_path, monkeypatch):
+    monkeypatch.setattr(storage, "now", lambda: 1000)
+    save_paste(_make(id="alive1", expires_at=5000), base_dir=str(tmp_path))
+    save_paste(_make(id="dead1", expires_at=500), base_dir=str(tmp_path))
+    removed = sweep_expired(base_dir=str(tmp_path))
+    assert removed == 1
+    assert load_raw("alive1", base_dir=str(tmp_path)) is not None
+    assert load_raw("dead1", base_dir=str(tmp_path)) is None

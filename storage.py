@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import glob
 import json
 import os
 import re
@@ -93,3 +94,15 @@ def load_for_view(paste_id: str, base_dir: str = PASTE_DIR) -> Paste | None:
     if paste.burn_after_read:
         delete_paste(paste_id, base_dir)
     return paste
+
+
+def sweep_expired(base_dir: str = PASTE_DIR) -> int:
+    """Delete all expired pastes; return count removed. For manual/cron use."""
+    removed = 0
+    for path in glob.glob(os.path.join(base_dir, "*.json")):
+        paste_id = os.path.splitext(os.path.basename(path))[0]
+        paste = load_raw(paste_id, base_dir)
+        if paste and paste.expires_at is not None and now() > paste.expires_at:
+            delete_paste(paste_id, base_dir)
+            removed += 1
+    return removed
