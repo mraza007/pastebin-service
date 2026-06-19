@@ -2,7 +2,7 @@ import bleach
 import markdown as md
 from pygments import highlight
 from pygments.formatters import HtmlFormatter
-from pygments.lexers import get_lexer_by_name
+from pygments.lexers import get_all_lexers, get_lexer_by_name
 from pygments.util import ClassNotFound
 
 _ALLOWED_TAGS = set(bleach.sanitizer.ALLOWED_TAGS) | {
@@ -39,6 +39,13 @@ def highlight_code(content: str, language: str) -> str:
     lexer = get_lexer_by_name(normalize_language(language), stripall=True)
     formatter = HtmlFormatter(linenos=True, cssclass="source")
     return highlight(content, lexer, formatter)
+
+
+def get_language_options() -> list[tuple[str, str]]:
+    """Sorted (lexer_alias, display_name) pairs for the language picker."""
+    return sorted(
+        (lexer[1][0], lexer[0]) for lexer in get_all_lexers() if lexer[1]
+    )
 
 
 def render_markdown(content: str) -> str:

@@ -1,6 +1,7 @@
 from rendering import (
     DARK_CSS,
     LIGHT_CSS,
+    get_language_options,
     highlight_code,
     normalize_language,
     render_markdown,
@@ -53,3 +54,10 @@ def test_markdown_strips_onclick_attributes():
 def test_markdown_keeps_safe_links():
     html = render_markdown("[ok](https://example.com)")
     assert 'href="https://example.com"' in html
+
+
+def test_language_options_sorted_pairs_include_python():
+    options = get_language_options()
+    assert ("python", "Python") in options
+    aliases = [alias for alias, _ in options]
+    assert aliases == sorted(aliases)

@@ -1,55 +1,80 @@
-from flask import Flask, request, render_template, abort
-import shortuuid
+from __future__ import annotations
+
 import os
-from pygments import highlight
-from pygments.lexers import get_lexer_by_name, get_all_lexers
-from pygments.formatters import HtmlFormatter
 
-app = Flask(__name__)
+import shortuuid
+from flask import Flask, abort, redirect, render_template, request, url_for
 
-PASTE_DIR = 'pastes'
-if not os.path.exists(PASTE_DIR):
-    os.makedirs(PASTE_DIR)
+from clock import now
+from rendering import (
+    DARK_CSS,
+    LIGHT_CSS,
+    get_language_options,
+    highlight_code,
+    normalize_language,
+    render_markdown,
+)
+from storage import Paste, compute_expires_at, is_valid_id, load_for_view, save_paste
 
-
-def get_language_options():
-    return sorted([(lexer[1][0], lexer[0]) for lexer in get_all_lexers() if lexer[1]])
-
-
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    if request.method == 'POST':
-        content = request.form['content']
-        language = request.form['language']
-        paste_id = shortuuid.uuid()
-        file_path = os.path.join(PASTE_DIR, paste_id)
-
-        with open(file_path, 'w') as f:
-            f.write(f"{language}\n{content}")
-
-        paste_url = request.url_root + paste_id
-        return render_template('index.html', paste_url=paste_url, languages=get_language_options())
-
-    return render_template('index.html', languages=get_language_options())
+MAX_CONTENT_LENGTH = 1 * 1024 * 1024  # 1 MB
 
 
-@app.route('/<paste_id>')
-def view_paste(paste_id):
-    file_path = os.path.join(PASTE_DIR, paste_id)
-    if not os.path.exists(file_path):
-        abort(404)
+def create_app(paste_dir: str = "pastes") -> Flask:
+    app = Flask(__name__)
+    app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
+    app.config["PASTE_DIR"] = paste_dir
+    os.makedirs(paste_dir, exist_ok=True)
 
-    with open(file_path, 'r') as f:
-        language = f.readline().strip()
-        content = f.read()
+    @app.route("/", methods=["GET", "POST"])
+    def index():
+        if request.method == "POST":
+            content = request.form.get("content", "")
+            if not content.strip():
+                abort(400)
+            render_mode = (
+                "markdown"
+                if request.form.get("render_mode") == "markdown"
+                else "code"
+            )
+            language = normalize_language(request.form.get("language", "text"))
+            paste = Paste(
+                id=shortuuid.uuid(),
+                content=content,
+                language=language,
+                render_mode=render_mode,
+                created_at=now(),
+                expires_at=compute_expires_at(request.form.get("expiry", "never")),
+                burn_after_read=request.form.get("burn") == "on",
+                views=0,
+            )
+            save_paste(paste, base_dir=app.config["PASTE_DIR"])
+            return redirect(url_for("view_paste", paste_id=paste.id), code=303)
+        return render_template("index.html", languages=get_language_options())
 
-    lexer = get_lexer_by_name(language, stripall=True)
-    formatter = HtmlFormatter(linenos=True, cssclass="source")
-    highlighted_content = highlight(content, lexer, formatter)
-    highlight_css = formatter.get_style_defs('.source')
+    @app.route("/<paste_id>")
+    def view_paste(paste_id: str):
+        if not is_valid_id(paste_id):
+            abort(404)
+        paste = load_for_view(paste_id, base_dir=app.config["PASTE_DIR"])
+        if paste is None:
+            abort(404)
+        if paste.render_mode == "markdown":
+            body = render_markdown(paste.content)
+        else:
+            body = highlight_code(paste.content, paste.language)
+        return render_template(
+            "index.html",
+            paste_content=body,
+            paste_id=paste_id,
+            burned=paste.burn_after_read,
+            light_css=LIGHT_CSS,
+            dark_css=DARK_CSS,
+        )
 
-    return render_template('index.html', paste_content=highlighted_content, highlight_css=highlight_css)
+    return app
 
 
-if __name__ == '__main__':
-    app.run(debug=True)
+app = create_app()
+
+if __name__ == "__main__":
+    app.run(debug=os.environ.get("FLASK_DEBUG") == "1")
