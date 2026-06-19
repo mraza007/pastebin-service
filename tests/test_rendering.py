@@ -3,6 +3,7 @@ from rendering import (
     LIGHT_CSS,
     highlight_code,
     normalize_language,
+    render_markdown,
 )
 
 
@@ -32,3 +33,23 @@ def test_theme_css_are_scoped_and_distinct():
     assert ':root:not([data-theme="dark"]) .source' in LIGHT_CSS
     assert ':root[data-theme="dark"] .source' in DARK_CSS
     assert LIGHT_CSS != DARK_CSS
+
+
+def test_markdown_renders_headings():
+    html = render_markdown("# Title")
+    assert "<h1" in html and "Title" in html
+
+
+def test_markdown_strips_script_tags():
+    html = render_markdown("hello <script>alert(1)</script>")
+    assert "<script" not in html.lower()
+
+
+def test_markdown_strips_onclick_attributes():
+    html = render_markdown('<a href="x" onclick="evil()">link</a>')
+    assert "onclick" not in html
+
+
+def test_markdown_keeps_safe_links():
+    html = render_markdown("[ok](https://example.com)")
+    assert 'href="https://example.com"' in html
