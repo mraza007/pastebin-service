@@ -5,6 +5,8 @@ import os
 import re
 from dataclasses import asdict, dataclass
 
+from clock import now
+
 PASTE_DIR = "pastes"
 
 _ID_RE = re.compile(r"^[A-Za-z0-9]{1,40}$")
@@ -53,3 +55,25 @@ def load_raw(paste_id: str, base_dir: str = PASTE_DIR) -> Paste | None:
         return None
     with open(path, encoding="utf-8") as f:
         return Paste.from_dict(json.load(f))
+
+
+def delete_paste(paste_id: str, base_dir: str = PASTE_DIR) -> None:
+    if not is_valid_id(paste_id):
+        return
+    try:
+        os.remove(_path(paste_id, base_dir))
+    except FileNotFoundError:
+        pass
+
+
+def load_for_view(paste_id: str, base_dir: str = PASTE_DIR) -> Paste | None:
+    """Load applying expiry + burn-after-read. Deletes dead/burned pastes."""
+    paste = load_raw(paste_id, base_dir)
+    if paste is None:
+        return None
+    if paste.expires_at is not None and now() > paste.expires_at:
+        delete_paste(paste_id, base_dir)
+        return None
+    if paste.burn_after_read:
+        delete_paste(paste_id, base_dir)
+    return paste

@@ -1,6 +1,13 @@
 import pytest
 
-from storage import Paste, is_valid_id, load_raw, save_paste
+import storage
+from storage import (
+    Paste,
+    is_valid_id,
+    load_for_view,
+    load_raw,
+    save_paste,
+)
 
 
 def _make(**kw):
@@ -82,3 +89,29 @@ def test_load_raw_missing_returns_none(tmp_path):
 
 def test_load_raw_invalid_id_returns_none(tmp_path):
     assert load_raw("../secret", base_dir=str(tmp_path)) is None
+
+
+def test_expired_paste_is_deleted_and_returns_none(tmp_path, monkeypatch):
+    monkeypatch.setattr(storage, "now", lambda: 1000)
+    save_paste(_make(expires_at=500), base_dir=str(tmp_path))
+    assert load_for_view("abc123", base_dir=str(tmp_path)) is None
+    assert load_raw("abc123", base_dir=str(tmp_path)) is None  # file gone
+
+
+def test_unexpired_paste_returned(tmp_path, monkeypatch):
+    monkeypatch.setattr(storage, "now", lambda: 1000)
+    save_paste(_make(expires_at=5000), base_dir=str(tmp_path))
+    assert load_for_view("abc123", base_dir=str(tmp_path)) is not None
+
+
+def test_never_expires_when_expires_at_none(tmp_path, monkeypatch):
+    monkeypatch.setattr(storage, "now", lambda: 10**12)
+    save_paste(_make(expires_at=None), base_dir=str(tmp_path))
+    assert load_for_view("abc123", base_dir=str(tmp_path)) is not None
+
+
+def test_burn_after_read_deletes_after_first_view(tmp_path):
+    save_paste(_make(burn_after_read=True), base_dir=str(tmp_path))
+    first = load_for_view("abc123", base_dir=str(tmp_path))
+    assert first is not None
+    assert load_for_view("abc123", base_dir=str(tmp_path)) is None  # burned
