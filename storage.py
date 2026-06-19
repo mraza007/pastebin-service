@@ -9,7 +9,23 @@ from clock import now
 
 PASTE_DIR = "pastes"
 
+EXPIRY_OPTIONS: dict[str, int | None] = {
+    "never": None,
+    "10m": 10 * 60,
+    "1h": 60 * 60,
+    "1d": 24 * 60 * 60,
+    "1w": 7 * 24 * 60 * 60,
+}
+
 _ID_RE = re.compile(r"^[A-Za-z0-9]{1,40}$")
+
+
+def compute_expires_at(option: str) -> int | None:
+    """Absolute expiry timestamp for an option, or None for never/unknown."""
+    seconds = EXPIRY_OPTIONS.get(option)
+    if seconds is None:
+        return None
+    return now() + seconds
 
 
 def is_valid_id(paste_id: str) -> bool:

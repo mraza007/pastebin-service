@@ -2,7 +2,9 @@ import pytest
 
 import storage
 from storage import (
+    EXPIRY_OPTIONS,
     Paste,
+    compute_expires_at,
     is_valid_id,
     load_for_view,
     load_raw,
@@ -115,3 +117,22 @@ def test_burn_after_read_deletes_after_first_view(tmp_path):
     first = load_for_view("abc123", base_dir=str(tmp_path))
     assert first is not None
     assert load_for_view("abc123", base_dir=str(tmp_path)) is None  # burned
+
+
+def test_never_returns_none(monkeypatch):
+    monkeypatch.setattr(storage, "now", lambda: 1000)
+    assert compute_expires_at("never") is None
+
+
+def test_known_option_adds_seconds(monkeypatch):
+    monkeypatch.setattr(storage, "now", lambda: 1000)
+    assert compute_expires_at("1h") == 1000 + 3600
+
+
+def test_unknown_option_defaults_to_never(monkeypatch):
+    monkeypatch.setattr(storage, "now", lambda: 1000)
+    assert compute_expires_at("bogus") is None
+
+
+def test_expiry_options_keys():
+    assert set(EXPIRY_OPTIONS) >= {"never", "10m", "1h", "1d", "1w"}
