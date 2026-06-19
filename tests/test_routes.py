@@ -82,3 +82,40 @@ def test_oversized_body_rejected(client):
     big = b"x" * (1 * 1024 * 1024 + 10)
     resp = client.post("/api/paste", data=big, content_type="text/plain")
     assert resp.status_code == 413
+
+
+def test_form_has_new_controls(client):
+    html = client.get("/").data.decode()
+    assert 'name="render_mode"' in html
+    assert 'name="expiry"' in html
+    assert 'name="burn"' in html
+    assert 'id="theme-toggle"' in html
+
+
+def test_view_page_has_raw_and_download_links(client):
+    pid = _create(client, "body")
+    html = client.get(f"/{pid}").data.decode()
+    assert f"/raw/{pid}" in html
+    assert f"/dl/{pid}" in html
+
+
+def test_burn_notice_shown_on_first_view(client):
+    resp = client.post(
+        "/",
+        data={
+            "content": "secret",
+            "language": "text",
+            "render_mode": "code",
+            "expiry": "never",
+            "burn": "on",
+        },
+    )
+    pid = resp.headers["Location"].strip("/")
+    html = client.get(f"/{pid}").data.decode()
+    assert "burn" in html.lower()
+
+
+def test_view_injects_theme_css(client):
+    pid = _create(client, "print('x')", language="python")
+    html = client.get(f"/{pid}").data.decode()
+    assert ':root[data-theme="dark"] .source' in html
