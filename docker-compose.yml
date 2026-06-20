@@ -1,0 +1,14 @@
+services:
+  web:
+    build: .
+    ports:
+      # Host 5001 -> container 5000. Host 5000 is avoided because macOS
+      # AirPlay Receiver (ControlCenter) squats on it and returns HTTP 403.
+      - "5001:5000"
+    volumes:
+      # Persist pastes across container restarts via a named volume.
+      - pastes:/app/pastes
+    restart: unless-stopped
+
+volumes:
+  pastes:

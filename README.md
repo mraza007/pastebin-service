@@ -36,6 +36,27 @@ FLASK_DEBUG=1 FLASK_APP=index .venv/bin/flask run
 
 Pastes are written to `./pastes` by default.
 
+## Docker
+
+Run the whole thing with Docker Compose (served by gunicorn):
+
+```bash
+docker compose up --build
+```
+
+Then open **http://localhost:5001**. The app listens on port 5000 inside the
+container; the host port is mapped to **5001** because macOS AirPlay Receiver
+occupies 5000 (it returns `403`). Change the mapping in `docker-compose.yml` if
+you prefer a different host port.
+
+Pastes persist across restarts in the named `pastes` volume (mounted at
+`/app/pastes`). To stop and remove the container:
+
+```bash
+docker compose down          # keep the pastes volume
+docker compose down -v       # also delete stored pastes
+```
+
 ## API
 
 Create a paste by POSTing the body to `/api/paste`. The response is the paste

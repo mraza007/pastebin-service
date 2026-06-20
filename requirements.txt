@@ -3,3 +3,4 @@ shortuuid
 pygments
 markdown
 bleach
+gunicorn

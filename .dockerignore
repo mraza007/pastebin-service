@@ -1,0 +1,23 @@
+# Virtualenvs / caches
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local runtime data (persisted via a volume instead)
+pastes/
+
+# VCS and worktrees
+.git/
+.gitignore
+.worktrees/
+
+# Tests, docs, and project meta not needed in the image
+tests/
+docs/
+pytest.ini
+requirements-dev.txt
+README.md
